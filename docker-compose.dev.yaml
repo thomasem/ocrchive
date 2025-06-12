@@ -1,11 +1,13 @@
 services:
   api:
-    build: backend/api
+    build:
+      dockerfile: dockerfiles/api/Dockerfile
+      context: .
     ports:
       - "8000:8000"
     volumes:
       - ./.dev/data:/data
-      - ./backend/api:/app
+      - ./backend/src/ocrchive/api:/app
     depends_on:
       db:
         condition: service_healthy
@@ -36,7 +38,9 @@ services:
       - ocrchive_pg_password
 
   migrate:
-    build: backend/database/sqitch
+    build:
+      dockerfile: dockerfiles/sqitch/Dockerfile
+      context: .
     environment:
       POSTGRES_HOST: db
     depends_on:
