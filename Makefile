@@ -1,10 +1,9 @@
 SHELL := /usr/bin/env bash
 
-DEV_COMPOSE_FILE="docker-compose.dev.yaml"
+DEV_COMPOSE_FILE := "docker-compose.dev.yaml"
 
 define dev_docker_compose
-	@source .env
-	@docker compose -f $(DEV_COMPOSE_FILE) $1
+	@source .env && docker compose -f $(DEV_COMPOSE_FILE) $1
 endef
 
 define dev_docker_compose_run
@@ -20,6 +19,9 @@ dev: .env
 
 dev-down: .env
 	$(call dev_docker_compose, down)
+
+dev-db-shell: .env
+	$(call dev_docker_compose, exec -it db psql -U $$OCRCHIVE_PG_USER)
 
 dev-reset: .env
 	$(MAKE) dev-down
