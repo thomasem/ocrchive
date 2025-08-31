@@ -1,0 +1,67 @@
+services:
+  api:
+    build:
+      dockerfile: dockerfiles/api/Dockerfile
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./.dev/data:/data
+      - ./backend/src/ocrchive/api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+    command: fastapi dev --host 0.0.0.0 main.py
+    networks:
+      - api
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/ocrchive_pg_user
+      POSTGRES_DB_FILE: /run/secrets/ocrchive_pg_database
+      POSTGRES_PASSWORD_FILE: /run/secrets/ocrchive_pg_password
+    volumes:
+      - ./.dev/pgdata:/var/lib/postgresql/data
+    networks:
+      - api
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $(cat /run/secrets/ocrchive_pg_user) -d $(cat /run/secrets/ocrchive_pg_database)"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 10s
+    secrets:
+      - ocrchive_pg_user
+      - ocrchive_pg_database
+      - ocrchive_pg_password
+
+  migrate:
+    build:
+      dockerfile: dockerfiles/sqitch/Dockerfile
+      context: .
+    environment:
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    command: deploy --verify
+    secrets:
+      - ocrchive_pg_user
+      - ocrchive_pg_database
+      - ocrchive_pg_password
+    networks:
+      - api
+
+
+networks:
+  api: {}
+
+secrets:
+  ocrchive_pg_user:
+    environment: OCRCHIVE_PG_USER
+  ocrchive_pg_database:
+    environment: OCRCHIVE_PG_DATABASE
+  ocrchive_pg_password:
+    environment: OCRCHIVE_PG_PASSWORD
